@@ -311,6 +311,9 @@ footer .btn{color:#fff}
 .qty{display:flex;align-items:center;gap:10px}
 .qty button{width:34px;height:34px;border:2px solid var(--text);background:none;color:var(--text);font:700 1.1rem "DM Sans",sans-serif;cursor:pointer}
 .qty button:hover{border-color:var(--red);color:var(--red)}
+.card .row{flex-wrap:wrap}
+.product-qty{gap:6px;flex-shrink:0}
+.product-qty output{min-width:2ch;text-align:center}
 .qty .rm{width:auto;padding:0 8px;font-size:.8rem;border-color:transparent;text-decoration:underline}
 .tot{display:flex;justify-content:space-between;font-family:Anton,Impact,sans-serif;font-size:1.6rem;text-transform:uppercase;margin:8px 0 4px}
 .gift{color:var(--red);font-weight:700;margin:0}
@@ -392,20 +395,12 @@ footer .btn{color:#fff}
 <div>
 <h1><span class="tag">Pizza a domicilio en Montevideo</span> No es solo pizza. <em>Es un antojo con sabor cubano.</em></h1>
 <p>Un pedacito de sabor cubano en Montevideo. Pizzas de 24 cm con masa gruesa y mucho queso, que te llevamos a domicilio con envío gratis.</p>
-<div class="cta"><a class="btn" href="#menu">Ver menú</a><a class="btn out" data-wa="pedido" href="https://wa.me/59896231677?text=Hola%20Kiki%E2%80%99s%20Pizza%2C%20quiero%20ver%20el%20men%C3%BA%20y%20hacer%20un%20pedido." target="_blank" rel="noopener">Pedir por WhatsApp</a></div>
 </div>
 <figure><img id="heroImg" src="/img/kikis-pizza-cubana-artesanal-portada.jpg" alt="Kiki’s Pizza, pizza cubana artesanal saliendo del horno" width="851" height="315" fetchpriority="high"></figure>
 </div>
 </section>
 
-<section class="about alt-bg" id="nosotros">
-<div class="wrap">
-<div class="reveal">
-<h2>Hecha para los que aman la pizza.</h2>
-<p>Masa deliciosa, queso que conquista y combinaciones irresistibles. En Kiki’s Pizza llevamos a Montevideo un sabor diferente, recién preparado para disfrutar en casa o retirar en nuestra puerta. ¡Haz tu pedido por WhatsApp y date ese gusto!</p>
-</div>
-</div>
-</section>
+<div id="nosotros"></div>
 
 <section class="menu" id="menu">
 <div class="wrap">
@@ -576,9 +571,34 @@ function pizzaSel(card){
 document.getElementById("pizzas").addEventListener("change", function(e){
   var card = e.target.closest("[data-pizza]"); if(!card || !e.target.dataset.ag) return;
   card.querySelector(".price").textContent = pr(pizzaSel(card).p);
+  syncProductQuantities();
 });
 document.getElementById("bebidas").innerHTML = CONFIG.bebidas.map(function(x){
   return '<article class="card reveal"><img src="'+IMG[x.i]+'" alt="Bebida '+x.n+'" loading="lazy" width="260" height="260"><div class="cb"><h4>'+x.n+'</h4><div class="row"><span class="price">'+pr(x.p)+'</span>'+addBtn(x.n,x.p,"+")+'</div></div></article>';}).join("");
+// Reuse the cart controls for the currently selected product (including extras).
+document.querySelectorAll(".card .add").forEach(function(a){
+  var qty = document.createElement("span");
+  qty.className = "qty product-qty";
+  var minus = document.createElement("button");
+  minus.type = "button"; minus.textContent = "−";
+  minus.className = "product-dec";
+  minus.setAttribute("aria-label", a.getAttribute("aria-label").replace("Agregar ", "Quitar uno de "));
+  var count = document.createElement("output");
+  count.setAttribute("aria-label", "Cantidad de " + a.closest(".card").querySelector("h4").textContent);
+  count.setAttribute("aria-live", "polite"); count.textContent = "0";
+  a.replaceWith(qty);
+  a.className = "add"; a.type = "button"; a.textContent = "+";
+  qty.append(minus, count, a);
+});
+function selectedProduct(a){
+  return a.dataset.pizza != null ? pizzaSel(a.closest("article")) : {n:a.dataset.n, p:+a.dataset.p};
+}
+function syncProductQuantities(){
+  document.querySelectorAll(".product-qty").forEach(function(qty){
+    var item = cart[selectedProduct(qty.querySelector(".add")).n];
+    qty.querySelector("output").textContent = item ? item.q : 0;
+  });
+}
 document.getElementById("promos").innerHTML = CONFIG.promos.map(function(t){return "<li>"+t+"</li>";}).join("");
 // Las redes sociales, el logo y la foto principal están escritos directamente en el HTML (mejor para Google).
 document.getElementById("year").textContent = new Date().getFullYear();
@@ -592,6 +612,7 @@ function money(n){return "$" + n;}
 function tot(){var t = 0, c = 0, pz = 0; Object.keys(cart).forEach(function(k){var i = cart[k]; t += i.p * i.q; c += i.q; if(i.pz) pz += i.q;}); return {t:t, c:c, g:(CONFIG.promoCada ? Math.floor(pz / CONFIG.promoCada) : 0)};}
 function $(id){return document.getElementById(id);}
 function drawCart(){
+  syncProductQuantities();
   var T = tot(), keys = Object.keys(cart);
   $("cnt").textContent = T.c;
   $("pill").hidden = !T.c; $("pill").textContent = "Ver pedido (" + T.c + ") · " + money(T.t);
@@ -604,13 +625,24 @@ function drawCart(){
 document.addEventListener("click", function(e){
   var a = e.target.closest(".add");
   if(a){
-    var it = a.dataset.pizza != null ? pizzaSel(a.closest("article")) : {n:a.dataset.n, p:+a.dataset.p};
+    var it = selectedProduct(a);
     var n = it.n, pz = a.dataset.pizza != null || !!a.dataset.pz;
     if(cart[n]) cart[n].q++; else cart[n] = {n:n, p:it.p, q:1, pz:pz};
     save(); drawCart();
+    if(a.closest(".product-qty")) return;
     if(!a.dataset.t) a.dataset.t = a.textContent;
     a.textContent = a.dataset.t.length > 1 ? "Agregado" : "✓";
     setTimeout(function(){a.textContent = a.dataset.t;}, 900);
+    return;
+  }
+  var minus = e.target.closest(".product-dec");
+  if(minus){
+    var name = selectedProduct(minus.parentNode.querySelector(".add")).n;
+    if(cart[name]){
+      cart[name].q--;
+      if(cart[name].q <= 0) delete cart[name];
+      save(); drawCart();
+    }
     return;
   }
   var b = e.target.closest("[data-act]");
