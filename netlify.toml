@@ -6,6 +6,9 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
 
 [[headers]]
   for = "/service-worker.js"
@@ -32,3 +35,31 @@
   for = "/robots.txt"
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
+
+# Las páginas usan /img/..., pero las fotos están en la raíz del repositorio.
+# Esta regla sirve /img/foto.jpg desde /foto.jpg (si existe una carpeta img, se usa esa).
+[[redirects]]
+  from = "/img/*"
+  to = "/:splat"
+  status = 200
+
+# Direcciones que Google reportó con error 404: llevan a la sección correspondiente.
+[[redirects]]
+  from = "/menu"
+  to = "/#menu"
+  status = 301
+
+[[redirects]]
+  from = "/contacto"
+  to = "/#contacto"
+  status = 301
+
+[[redirects]]
+  from = "/preguntas-frecuentes"
+  to = "/#preguntas"
+  status = 301
+
+[[redirects]]
+  from = "/sobre-nosotros"
+  to = "/"
+  status = 301
