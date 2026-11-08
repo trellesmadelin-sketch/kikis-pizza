@@ -5,6 +5,9 @@
  */
 
 import {
+  acceptInvite,
+  getSettings,
+  oauthLogin,
   signup,
   login,
   logout,
@@ -16,7 +19,19 @@ import {
 } from "https://esm.sh/@netlify/identity@2.0.1";
 
 let currentUser = null;
-let initialized = false;
+let initialization;
+
+export { getSettings, oauthLogin };
+
+export async function joinInvitation(token, password) {
+  try {
+    const user = await acceptInvite(token, password);
+    notifyAuthChange(user);
+    return { success: true, user };
+  } catch {
+    return { success: false, message: "No se pudo aceptar la invitación. Solicita un nuevo enlace e inténtalo otra vez." };
+  }
+}
 
 const authEvents = new EventTarget();
 
@@ -53,6 +68,7 @@ export async function register({ name, email, password }) {
       { full_name: name.trim() }
     );
 
+    notifyAuthChange(await getUser());
     return {
       success: true,
       user,
@@ -126,30 +142,16 @@ export async function setNewPassword(password) {
   }
 }
 
-export async function initializeAuth() {
-  if (initialized) return currentUser;
-
-  try {
-    await handleAuthCallback();
-
-    const user = await getUser();
-    notifyAuthChange(user);
-
-    subscribeIdentity((event, updatedUser) => {
-      notifyAuthChange(updatedUser);
-
-      authEvents.dispatchEvent(
-        new CustomEvent("auth:event", {
-          detail: { event, user: updatedUser }
-        })
-      );
+export function initializeAuth() {
+  if (initialization) return initialization;
+  initialization = (async () => {
+    subscribeIdentity((event, user) => {
+      notifyAuthChange(user);
+      authEvents.dispatchEvent(new CustomEvent("auth:event", { detail: { event, user } }));
     });
-
-    initialized = true;
-    return currentUser;
-  } catch (error) {
-    console.error("Error inicializando Netlify Identity:", error);
-    notifyAuthChange(null);
-    return null;
-  }
+    const callback = await handleAuthCallback();
+    notifyAuthChange(await getUser());
+    return callback;
+  })();
+  return initialization;
 }
