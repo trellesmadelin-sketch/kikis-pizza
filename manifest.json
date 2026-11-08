@@ -1,0 +1,15 @@
+
+{
+  "id": "/",
+  "name": "Kiki's Pizza",
+  "short_name": "Kiki's Pizza",
+  "description": "Pizzas artesanales con sabor cubano en Montevideo. Haz tu pedido online.",
+  "lang": "es-UY",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#b5121b",
+  "categories": ["food", "shopping"]
+}
