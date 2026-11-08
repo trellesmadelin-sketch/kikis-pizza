@@ -346,12 +346,31 @@ footer .btn{color:#fff}
 .cf .btn:first-child{flex:1;text-align:center}
 .pill{position:fixed;left:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:55;background:#171717;color:#FFF3E0;border:0;font:700 .95rem "DM Sans",sans-serif;padding:14px 20px;border-radius:999px;box-shadow:0 6px 18px #0005;cursor:pointer}
 .pill:hover{background:var(--red2)}
+/* Cuenta de clientes */
+.account-trigger{background:transparent;border:1px solid var(--line);color:var(--text);padding:9px 12px;font:700 .85rem "DM Sans",sans-serif;cursor:pointer;white-space:nowrap}
+.account-dialog{width:min(460px,calc(100% - 32px));max-height:90dvh;overflow:auto;padding:28px;border:2px solid var(--red);background:var(--bg);color:var(--text)}
+.account-dialog::backdrop{background:#171717b8}
+.account-dialog h2{font-size:2rem;margin:12px 0 18px}
+.account-dialog .account-close{float:right;background:none;border:0;color:var(--text);font:inherit;cursor:pointer}
+.account-dialog form,.account-dialog label{display:grid;gap:8px}
+.account-dialog form{gap:16px;margin:18px 0}
+.account-dialog input{width:100%;padding:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit}
+.account-dialog input:focus-visible{outline:2px solid var(--red)}
+.account-dialog button{cursor:pointer}
+.account-dialog button:disabled{opacity:.6;cursor:wait}
+.account-dialog [hidden]{display:none!important}
+.account-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+.account-link{background:none;border:0;padding:4px 0;color:var(--red);font:700 .9rem "DM Sans",sans-serif;text-decoration:underline}
+.account-dialog #accountStatus{font-size:.95rem;overflow-wrap:anywhere}
+.account-dialog #accountProviders{display:grid;gap:8px;margin-top:16px}
+@media(max-width:600px){.nav{gap:8px}.brand{font-size:1.15rem;gap:6px}.brand img{width:32px;height:32px}.account-trigger{padding:9px 7px;font-size:.75rem}.burger{padding:8px}.cartbtn{padding:8px}}
 </style>
 </head>
 <body>
 <header>
 <div class="wrap nav">
 <a class="brand" href="#inicio"><img id="logoH" src="/img/logo-kikis-pizza.jpg" alt="Logo de Kiki’s Pizza" width="44" height="44">Kiki’s Pizza</a>
+<button class="account-trigger" id="accountBtn" aria-haspopup="dialog">Mi cuenta</button>
 <button class="cartbtn" id="cartBtn">Pedido <b id="cnt">0</b></button>
 <button class="burger" id="burger" aria-expanded="false" aria-controls="links">Menú</button>
 <nav class="links" id="links" aria-label="Principal">
@@ -652,5 +671,28 @@ if("IntersectionObserver" in window){
   els.forEach(function(el){io.observe(el);});
 }else{els.forEach(function(el){el.classList.add("in");});}
 </script>
+<dialog class="account-dialog" id="accountDialog" aria-labelledby="accountTitle">
+<button type="button" class="account-close" id="accountClose" aria-label="Cerrar cuenta">Cerrar ×</button>
+<p class="kick">Kiki’s Pizza · Tu cuenta</p>
+<h2 id="accountTitle">Bienvenido a Kiki’s</h2>
+<p id="accountStatus" role="status" aria-live="polite">Cargando acceso…</p>
+<p id="accountProfile" hidden></p>
+<form id="accountForm" hidden>
+<label id="accountNameLabel" hidden>Nombre<input id="accountName" autocomplete="name" maxlength="100"></label>
+<label id="accountEmailLabel">Correo electrónico<input id="accountEmail" type="email" autocomplete="email" required></label>
+<label id="accountPasswordLabel">Contraseña<input id="accountPassword" type="password" autocomplete="current-password" required></label>
+<label id="accountConfirmLabel" hidden>Repite la contraseña<input id="accountConfirm" type="password" autocomplete="new-password"></label>
+<button class="btn" id="accountSubmit" type="submit">Entrar</button>
+</form>
+<div id="accountProviders"></div>
+<div class="account-actions">
+<button class="account-link" id="accountLogin" hidden>Iniciar sesión</button>
+<button class="account-link" id="accountRegister" hidden>Crear cuenta</button>
+<button class="account-link" id="accountRecover" hidden>Olvidé mi contraseña</button>
+<button class="btn out sm" id="accountLogout" hidden>Cerrar sesión</button>
+</div>
+<p class="note" style="margin:20px 0 0;font-size:.85rem">También puedes pedir por WhatsApp sin crear una cuenta.</p>
+</dialog>
+<script type="module" src="/js/account.js"></script>
 </body>
 </html>
