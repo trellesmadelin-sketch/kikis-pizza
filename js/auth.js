@@ -1,7 +1,7 @@
 
 /**
  * Kiki's Pizza - Netlify Identity
- * Registro, autenticación y gestión de sesiones.
+ * Autenticación de clientes.
  */
 
 import {
@@ -9,32 +9,36 @@ import {
   login,
   logout,
   getUser,
-  recoverPassword,
-  handleAuthCallback
-} from "@netlify/identity";
-
-const AUTH_ENDPOINT = "https://kikispizza.netlify.app/.netlify/identity";
+  handleAuthCallback,
+  requestPasswordRecovery,
+  updateUser,
+  onAuthChange as subscribeIdentity
+} from "https://esm.sh/@netlify/identity@2.0.1";
 
 let currentUser = null;
+let initialized = false;
 
 const authEvents = new EventTarget();
 
 function notifyAuthChange(user) {
-  currentUser = user;
+  currentUser = user || null;
 
   authEvents.dispatchEvent(
     new CustomEvent("auth:change", {
-      detail: { user }
+      detail: { user: currentUser }
     })
   );
 }
 
 export function onAuthChange(callback) {
-  authEvents.addEventListener("auth:change", event => {
-    callback(event.detail.user);
-  });
+  const listener = event => callback(event.detail.user);
 
+  authEvents.addEventListener("auth:change", listener);
   callback(currentUser);
+
+  return () => {
+    authEvents.removeEventListener("auth:change", listener);
+  };
 }
 
 export function getCurrentUser() {
@@ -43,11 +47,11 @@ export function getCurrentUser() {
 
 export async function register({ name, email, password }) {
   try {
-    const user = await signup({
-      email: email.trim(),
+    const user = await signup(
+      email.trim(),
       password,
-      data: { full_name: name.trim() }
-    });
+      { full_name: name.trim() }
+    );
 
     return {
       success: true,
@@ -64,11 +68,7 @@ export async function register({ name, email, password }) {
 
 export async function signIn(email, password) {
   try {
-    const user = await login({
-      email: email.trim(),
-      password
-    });
-
+    const user = await login(email.trim(), password);
     notifyAuthChange(user);
 
     return { success: true, user };
@@ -96,34 +96,60 @@ export async function signOut() {
 
 export async function resetPassword(email) {
   try {
-    await recoverPassword(email.trim());
+    await requestPasswordRecovery(email.trim());
 
     return {
       success: true,
-      message: "Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña."
+      message: "Revisa tu correo para recuperar tu contraseña."
     };
   } catch (error) {
     return {
       success: false,
-      message: error.message || "No se pudo procesar la solicitud."
+      message: error.message || "No se pudo enviar el correo."
+    };
+  }
+}
+
+export async function setNewPassword(password) {
+  try {
+    await updateUser({ password });
+
+    const user = await getUser();
+    notifyAuthChange(user);
+
+    return { success: true, user };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "No se pudo actualizar la contraseña."
     };
   }
 }
 
 export async function initializeAuth() {
+  if (initialized) return currentUser;
+
   try {
     await handleAuthCallback();
 
     const user = await getUser();
+    notifyAuthChange(user);
 
-    notifyAuthChange(user || null);
+    subscribeIdentity((event, updatedUser) => {
+      notifyAuthChange(updatedUser);
 
-    return user || null;
+      authEvents.dispatchEvent(
+        new CustomEvent("auth:event", {
+          detail: { event, user: updatedUser }
+        })
+      );
+    });
+
+    initialized = true;
+    return currentUser;
   } catch (error) {
-    console.error("Error inicializando Identity:", error);
+    console.error("Error inicializando Netlify Identity:", error);
     notifyAuthChange(null);
     return null;
   }
 }
-
-export { AUTH_ENDPOINT };
